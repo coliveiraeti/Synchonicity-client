@@ -1,0 +1,88 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Synchronicity</title>
+
+    <link href="./css/bootstrap.min.css" rel="stylesheet">
+    <link href="./css/synchronicity-index.css" rel="stylesheet">
+
+  </head>
+
+  <body>
+      <!-- Fixed navbar -->
+      <nav class="navbar navbar-default navbar-fixed-top">
+          <div class="container">
+              <div class="navbar-header">
+                  <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                      <span class="sr-only">Toggle navigation</span>
+                      <span class="icon-bar"></span>
+                      <span class="icon-bar"></span>
+                      <span class="icon-bar"></span>
+                  </button>
+                  <a class="navbar-brand" href="#">Synchronicity</a>
+              </div>
+              <div id="navbar" class="navbar-collapse collapse">
+                  <ul class="nav navbar-nav">
+                  </ul>
+                  <ul class="nav navbar-nav navbar-right">
+                      <li class="dropdown">
+                          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><span id="userName">Dropdown</span> <span class="caret"></span></a>
+                          <ul class="dropdown-menu">
+                              <li><a id="linkConfiguration" href="#">Configuration</a></li>
+                          </ul>
+                      </li>
+                  </ul>
+              </div><!--/.nav-collapse -->
+          </div>
+      </nav>
+
+      <div class="container">
+          <h2>VMs List</h2>
+          <div class="list-group">
+          </div>
+          <a id="vm-template" href="#" class="list-group-item invisible">
+              <h4 class="list-group-item-heading">{name}</h4>
+              <p class="list-group-item-text"><span data-user></span> - <span data-description></span></p>
+          </a>
+      </div>
+
+      <div id="divDescription" class="modal" tabindex="-1" role="dialog">
+          <div class="modal-dialog" role="document">
+              <div class="modal-content">
+                  <div class="modal-header">
+                      <h5 class="modal-title">Modal title</h5>
+                  </div>
+                  <div class="modal-body">
+                      <p>Modal body text goes here.</p>
+                      <input type="text" class="form-control" id="inputDescription" placeholder="Description">
+                  </div>
+                  <div class="modal-footer">
+                      <button id="buttonConnect" type="button" class="btn btn-primary">Connect</button>
+                      <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+      <script src="./js/jquery-1.12.4.min.js"></script>
+      <script src="./js/bootstrap.min.js"></script>
+      <script src="./js/jquery.signalR-2.3.0.min.js"></script>
+      <script src="./js/synchronicity.js"></script>
+      <script>
+          (async function () {
+              await Synchronicity.Core.init();
+
+              var configuration = await Synchronicity.Configuration.get();
+              if (configuration.userName === null) {
+                  Synchronicity.Navigate.toConfiguration();
+                  return;
+              }
+
+              Synchronicity.Core.bootstrap(configuration.userName);
+          })();
+      </script>
+  </body>
+</html>

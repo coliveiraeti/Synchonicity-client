@@ -1,0 +1,66 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Synchronicity - Configuration</title>
+
+    <link href="./css/bootstrap.min.css" rel="stylesheet">
+    <link href="./css/syncronicity-register.css" rel="stylesheet">
+
+  </head>
+
+  <body>
+
+      <div class="container">
+          <form class="form-signin">
+              <h2 class="form-signin-heading">Configuration</h2>
+              <div class="form-group">
+                  <label for="inputServerUrl">Server URL</label>
+                  <input type="text" id="inputServerUrl" class="form-control" placeholder="Server URL" required>
+              </div>
+              <div class="form-group">
+                  <label for="inputUser">Username</label>
+                  <input type="text" id="inputUser" class="form-control" placeholder="Username" required autofocus>
+              </div>
+              <div class="form-group">
+                  <label for="inputPassword">Password</label>
+                  <input type="password" id="inputPassword" class="form-control" placeholder="Password" required>
+              </div>
+              <div class="text-right">
+                  <button class="btn btn-primary" type="submit">Save</button>
+                  <button id="buttonCancel" class="btn" type="button">Cancel</button>
+              </div>
+          </form>
+      </div>
+
+      <script src="./js/jquery-1.12.4.min.js"></script>
+      <script src="./js/bootstrap.min.js"></script>
+      <script src="./js/synchronicity.js"></script>
+      <script>
+          (async function () {
+              await Synchronicity.Core.init();
+              var configuration = await Synchronicity.Configuration.get();
+              document.querySelector('#inputServerUrl').value = configuration.serverUrl;
+              document.querySelector('#inputUser').value = configuration.userName;
+              document.querySelector('#inputPassword').value = configuration.password;
+
+              document.querySelector('#buttonCancel').addEventListener('click', function (e) {
+                  e.preventDefault();
+                  Synchronicity.Navigate.toIndex();
+              });
+
+              document.querySelector('.form-signin').addEventListener('submit', async function (e) {
+                  e.preventDefault();
+                  await Synchronicity.Configuration.set(
+                      document.querySelector('#inputServerUrl').value,
+                      document.querySelector('#inputUser').value,
+                      document.querySelector('#inputPassword').value);
+                  Synchronicity.Navigate.toIndex();
+              });
+          })();
+
+      </script>
+  </body>
+</html>
