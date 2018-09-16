@@ -29,10 +29,10 @@ namespace Synchronicity.Client.UI
             browser.ShowDevTools();
         }
 
-        public void CallRdpClient(string callback)
+        public void CallRdpClient(string title, string parameters, string username, string password, string callback)
         {
             var configuration = GetConfiguration();
-            exec.Executor.Instance.Execute(configuration).ContinueWith((antecedent) =>
+            exec.Executor.Instance.Execute(title, parameters, username, password, configuration).ContinueWith((antecedent) =>
             {
                 browser.GetMainFrame().ExecuteJavaScriptAsync(callback);
             });
@@ -48,13 +48,13 @@ namespace Synchronicity.Client.UI
             return GetConfiguration().UserName;
         }
 
-        public void SetConfiguration(string serverUrl, string userName, string password)
+        public void SetConfiguration(string serverUrl, string userName, string wFreeRdpPath)
         {
             SetConfiguration(new Configuration
             {
                 ServerUrl = serverUrl,
-                UserName = userName, 
-                Password = password
+                UserName = userName,
+                WFreeRdpPath = wFreeRdpPath
             });
         }
 

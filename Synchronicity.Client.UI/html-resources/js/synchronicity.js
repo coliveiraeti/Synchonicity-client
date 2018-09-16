@@ -1,47 +1,81 @@
 ﻿var Synchronicity = Synchronicity || {};
 
 Synchronicity.Core = (function () {
-    init = async function () {
-        await CefSharp.BindObjectAsync("cefCustomObject");
+    init = function () {
+        return CefSharp.BindObjectAsync("cefCustomObject");
     }
 
-    callRdpClient = function (id) {
-        cefCustomObject.callRdpClient(`Synchronicity.Server.notifyDisconnect('${id}')`);
+    callRdpClient = function (id, title, parameters, username, password) {
+        cefCustomObject.callRdpClient(title, parameters, username, password, `Synchronicity.Server.notifyDisconnect('${id}')`);
     }
 
     bootstrap = function (userName) {
-        Synchronicity.Server.startSignalR(async function () {
-            Synchronicity.VMList.populate(await Synchronicity.Server.listVMs());
-        });
-
         document.querySelector('#userName').innerHTML = userName;
-        document.querySelector('.list-group').addEventListener('click', function (event) {
-            event.preventDefault();
-            var element = event.target.closest('.list-group-item');
-            if (element) {
-                element.setAttribute('data-selected', '');
-                $('#divDescription').modal('show');
-            }
-        }, false);
+
+        Synchronicity.Server.startSignalR(function () {
+            Synchronicity.Server.listVMs().then(function (json) {
+                Synchronicity.VMList.populate(json)
+
+                document.querySelector('.list-group').addEventListener('click', function (event) {
+                    event.preventDefault();
+
+                    if (event.target.hasAttribute('data-role') &&
+                        event.target.attributes['data-role'].value === 'history') {
+                        var listItem = event.target.closest('.list-group-item')
+                        var vmId = listItem.attributes['data-vm-id'].value
+                        document.querySelector('#buttonSearchHistory').setAttribute('data-vm-id', vmId)
+                        Synchronicity.Server.listHistory(vmId, '', Synchronicity.HistoryList.populate)
+                        $('#divHistory').modal('show')
+                    }
+                    else {
+                        var element = event.target.closest('.list-group-item')
+                        if (element) {
+                            element.setAttribute('data-selected', '')
+                            $('#divDescription').modal('show')
+                        }
+                    }
+                }, false);
+
+            })
+        })
 
         document.querySelector('#linkConfiguration').addEventListener('click', async function (event) {
             event.preventDefault();
             Synchronicity.Navigate.toConfiguration();
         });
 
-        document.querySelector('#buttonConnect').addEventListener('click', async function (event) {
+        document.querySelector('#buttonConnect').addEventListener('click', function (event) {
             event.preventDefault();
             var selected = document.querySelector('[data-selected]');
-            var configuration = await Synchronicity.Configuration.get();
-            Synchronicity.Server.notifyConnect(
-                selected.attributes['data-vm-id'].value,
-                configuration.userName,
-                document.querySelector('#inputDescription').value
-            );
-            $('#divDescription').modal('hide');
-            Synchronicity.Core.callRdpClient(selected.attributes['data-vm-id'].value);
+            Synchronicity.Configuration.get().then(function (configuration) {
+
+                Synchronicity.Server.notifyConnect(
+                    selected.attributes['data-vm-id'].value,
+                    configuration.userName,
+                    document.querySelector('#inputDescription').value
+                );
+                $('#divDescription').modal('hide');
+                Synchronicity.Core.callRdpClient(
+                    selected.attributes['data-vm-id'].value,
+                    selected.querySelector('[data-vm-name]').innerHTML,
+                    selected.attributes['data-wfreerdp-parameters'].value,
+                    document.querySelector('#inputUsername').value,
+                    document.querySelector('#inputPassword').value
+                );
+
+            });
         });
 
+        document.querySelector('#buttonSearchHistory').addEventListener('click', function () {
+            Synchronicity.Server.listHistory(this.attributes['data-vm-id'].value,
+                document.querySelector('#inputSearchDescription').value,
+                Synchronicity.HistoryList.populate)
+        })
+
+        $('#divHistory').on('show.bs.modal', function () {
+            document.querySelector('#inputSearchDescription').value = '';
+        });
+      
         $('#divDescription').on('show.bs.modal', function () {
             document.querySelector('#inputDescription').value = '';
         });
@@ -82,13 +116,15 @@ Synchronicity.Navigate = (function () {
 
 Synchronicity.Configuration = (function () {
 
-    get = async function () {
-        var conf = await cefCustomObject.getConfiguration();
-        return {
-            serverUrl: conf.ServerUrl,
-            userName: conf.UserName,
-            password: conf.Password
-        }
+    get = function () {
+        return cefCustomObject.getConfiguration().then(
+            function (conf) {
+                return {
+                    serverUrl: conf.ServerUrl,
+                    userName: conf.UserName,
+                    wFreeRdpPath: conf.WFreeRdpPath
+                }
+            })
     }
 
     set = async function (serverUrl, userName, password) {
@@ -124,6 +160,7 @@ Synchronicity.VMList = (function () {
                 var clone = template.cloneNode(true);
                 clone.id = 'vm-' + json[item].Id;
                 clone.setAttribute('data-vm-id', json[item].Id);
+                clone.setAttribute('data-wfreerdp-parameters', json[item].WFreeRdpParameters);
                 clone.classList.remove('invisible');
                 clone.innerHTML = clone.innerHTML.replace('{name}', json[item].Name);
                 listGroup.appendChild(clone);
@@ -163,29 +200,66 @@ Synchronicity.VMList = (function () {
     };
 }());
 
+Synchronicity.HistoryList = (function () {
+    populate = function (json) {
+        var newTBody = document.createElement('tbody')
+        for (var item in json) {
+            var row = newTBody.insertRow(-1)
+            var date = new Date(json[item].CreationDate)
+            row.insertCell(0).innerHTML = date.toLocaleString()
+            row.insertCell(1).innerHTML = json[item].CreationUser
+            row.insertCell(2).innerHTML = json[item].Description
+        }
+        var tableBody = document.querySelector('#divHistory .modal-body .table tbody')
+        tableBody.parentNode.replaceChild(newTBody, tableBody)
+    }
+
+    return {
+        populate: populate
+    }
+}());
+
 Synchronicity.Server = (function () {
     const hubName = 'SynchronicityHub';
     var connection, hub;
 
-    listVMs = async function () {
-        var configuration = await Synchronicity.Configuration.get();
-        var url = configuration.serverUrl;
-        var response = await fetch(url + 'virtualmachine', { method: 'GET' });
-        return response.json();
+    listVMs = function () {
+        return Synchronicity.Configuration.get().then(function (configuration) {
+            var url = configuration.serverUrl;
+            return fetch(`${url}virtualmachine`).then(function (response) {
+                return response.json();
+            });
+        });
     }
 
-    startSignalR = async function (callback) {
-        var configuration = await Synchronicity.Configuration.get();
-        var url = configuration.serverUrl;
-        connection = $.hubConnection(url);
-        hub = connection.createHubProxy(hubName);
+    listHistory = async function (virtualMachineId, description, callback) {
+        await Synchronicity.Configuration.get().then(function (configuration) {
+            var baseUrl = configuration.serverUrl
+            description = encodeURI(description)
+            var url = `${baseUrl}history?virtualMachineId=${virtualMachineId}&description=${description}`
+            fetch(url,
+                { method: 'GET' })
+                .then(function (response) {
+                    response.json().then(function (json) {
+                        callback(json)
+                    })
+                })
+        })
+    }
 
-        hub.on('refresh', function () {
-            callback();
-        })
-        connection.start().done(function () {
-            hub.invoke('refresh');
-        })
+    startSignalR = function (callback) {
+        return Synchronicity.Configuration.get().then(function (configuration) {
+            var url = configuration.serverUrl;
+            connection = $.hubConnection(url);
+            hub = connection.createHubProxy(hubName);
+
+            hub.on('refresh', function () {
+                callback();
+            })
+            connection.start().done(function () {
+                hub.invoke('refresh');
+            })
+        });
     }
 
     notifyConnect = function (idVM, user, description) {
@@ -199,6 +273,7 @@ Synchronicity.Server = (function () {
 
     return {
         listVMs: listVMs,
+        listHistory: listHistory,
         startSignalR: startSignalR,
         notifyConnect: notifyConnect,
         notifyDisconnect: notifyDisconnect

@@ -12,7 +12,7 @@
   </head>
 
   <body>
-      <!-- Fixed navbar -->
+
       <nav class="navbar navbar-default navbar-fixed-top">
           <div class="container">
               <div class="navbar-header">
@@ -25,8 +25,7 @@
                   <a class="navbar-brand" href="#">Synchronicity</a>
               </div>
               <div id="navbar" class="navbar-collapse collapse">
-                  <ul class="nav navbar-nav">
-                  </ul>
+                  <ul class="nav navbar-nav"></ul>
                   <ul class="nav navbar-nav navbar-right">
                       <li class="dropdown">
                           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><span id="userName">Dropdown</span> <span class="caret"></span></a>
@@ -34,8 +33,8 @@
                               <li><a id="linkConfiguration" href="#">Configuration</a></li>
                           </ul>
                       </li>
-                  </ul>
-              </div><!--/.nav-collapse -->
+                   </ul>
+              </div>
           </div>
       </nav>
 
@@ -44,23 +43,64 @@
           <div class="list-group">
           </div>
           <a id="vm-template" href="#" class="list-group-item invisible">
-              <h4 class="list-group-item-heading">{name}</h4>
+              <h4 class="list-group-item-heading" data-vm-name>{name}</h4>
+              <div class="pull-right">
+                  <span class="glyphicon glyphicon-time" aria-hidden="true" data-role="history"></span>
+              </div>
               <p class="list-group-item-text"><span data-user></span> - <span data-description></span></p>
           </a>
       </div>
 
-      <div id="divDescription" class="modal" tabindex="-1" role="dialog">
+      <div id="divDescription" class="modal fade" tabindex="-1" role="dialog">
           <div class="modal-dialog" role="document">
               <div class="modal-content">
                   <div class="modal-header">
-                      <h5 class="modal-title">Modal title</h5>
+                      <h4 class="modal-title">Connecting</h4>
                   </div>
                   <div class="modal-body">
-                      <p>Modal body text goes here.</p>
-                      <input type="text" class="form-control" id="inputDescription" placeholder="Description">
+                      <label for="inputDescription">Connection Reason</label>
+                      <input id="inputDescription" type="text" class="form-control" placeholder="Connection Reason">
+                      <label for="inputUsername">Username</label>
+                      <input id="inputUsername" type="text" class="form-control" placeholder="Username">
+                      <label for="inputPassword">Password</label>
+                      <input id="inputPassword" type="password" class="form-control" placeholder="Password">
                   </div>
                   <div class="modal-footer">
                       <button id="buttonConnect" type="button" class="btn btn-primary">Connect</button>
+                      <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+      <div id="divHistory" class="modal fade" tabindex="-1" role="dialog">
+          <div class="modal-dialog" role="document">
+              <div class="modal-content">
+                  <div class="modal-header">
+                      <h4 class="modal-title">History</h4>
+                  </div>
+                  <div class="modal-body">
+
+                      <form class="form-inline">
+                          <div class="form-group">
+                              <input id="inputSearchDescription" type="text" class="form-control" placeholder="Description Search">
+                          </div>
+                          <button id="buttonSearchHistory" type="button" class="btn btn-primary">Search</button>
+                      </form>
+
+                      <table class="table">
+                          <thead>
+                              <tr>
+                                  <th scope="col">Date</th>
+                                  <th scope="col">User</th>
+                                  <th scope="col">Description</th>
+                              </tr>
+                          </thead>
+                          <tbody></tbody>
+                      </table>
+
+                  </div>
+                  <div class="modal-footer">
                       <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                   </div>
               </div>
@@ -72,16 +112,18 @@
       <script src="./js/jquery.signalR-2.3.0.min.js"></script>
       <script src="./js/synchronicity.js"></script>
       <script>
-          (async function () {
-              await Synchronicity.Core.init();
+          (function () {
+              Synchronicity.Core.init().then(function () {
 
-              var configuration = await Synchronicity.Configuration.get();
-              if (configuration.userName === null) {
-                  Synchronicity.Navigate.toConfiguration();
-                  return;
-              }
+                  Synchronicity.Configuration.get().then(function (configuration) {
+                      if (configuration.userName === null) {
+                          Synchronicity.Navigate.toConfiguration();
+                          return;
+                      }
+                      Synchronicity.Core.bootstrap(configuration.userName);
+                  });
 
-              Synchronicity.Core.bootstrap(configuration.userName);
+              })
           })();
       </script>
   </body>

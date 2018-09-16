@@ -49,7 +49,7 @@ namespace Synchronicity.Client.UI
 
         void ChromeBrowserIsBrowserInitializedChanged(object sender, IsBrowserInitializedChangedEventArgs e)
         {
-            browser.ShowDevTools();
+            //browser.ShowDevTools();
         }
     }
 }
